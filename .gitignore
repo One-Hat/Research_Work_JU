@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch dataset downloads
+data/
+*.tar.gz
+*.gz
+
+# Checkpoints & Model weights (can be uploaded to GitHub Releases or tracked with Git LFS if needed)
+*.pt
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Environment and temporary files
+*.log
+.vscode/
+.idea/
+scratch/
+test.pdf
+test.png
+test_plot.png
