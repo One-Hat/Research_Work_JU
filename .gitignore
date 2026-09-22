@@ -8,18 +8,19 @@ data/
 *.tar.gz
 *.gz
 
-# Checkpoints & Model weights (can be uploaded to GitHub Releases or tracked with Git LFS if needed)
+# Checkpoints & Model weights
 *.pt
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 */.ipynb_checkpoints/*
 
-# Environment and temporary files
+# Environment, projects, and temporary files
 *.log
 .vscode/
 .idea/
 scratch/
+anaconda_projects/
 test.pdf
 test.png
 test_plot.png
