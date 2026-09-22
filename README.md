@@ -1,15 +1,21 @@
-# Research_Work_JU: Adaptive Reinforcement Learning Fusion for Multi-Branch Vision Architectures (CNN + ViT)
+# Research_Work_JU: Adaptive Reinforcement Learning Fusion for Multi-Branch Vision Architectures (VGG-BN + ViT)
 
-This repository contains the complete implementation, calibration pipeline, and experimental evaluation for an **adaptive, per-class Reinforcement Learning (RL) fusion framework** that dynamically combines the complementary inductive biases of a **Convolutional Neural Network (CNN)** and a **Vision Transformer (ViT)**.
+This repository contains the complete implementation, calibration pipeline, and experimental evaluation for an **adaptive, per-class Reinforcement Learning (RL) fusion framework** that dynamically combines the complementary inductive biases of a **High-Capacity VGG Convolutional Neural Network with Batch Normalization (`VGGCIFAR`)** and a **Vision Transformer (`VisionTransformer`)** on **CIFAR-10**.
 
 ---
 
 ## 🔬 Core Research Concepts
 
-### 1. Complementary Inductive Biases
-- **CNN Branch (`01_cnn_branch.ipynb`)**: Models local receptive fields and translation equivariance. Ideal for spatial textures, fine edges, and translation-invariant patterns.
-- **ViT Branch (`02_vit_branch.ipynb`)**: Models global cross-patch relationships via multi-head self-attention. Ideal for long-range spatial context and structural relationships across distant patches.
-- Both branches output a normalized **128-dimensional penultimate expertise feature vector** (`feat`), enabling fair, direct downstream comparison.
+### 1. Complementary Inductive Biases & Architectures
+- **CNN Branch (`01_cnn_branch.ipynb` — `VGGCIFAR`)**:
+  - Deep 7-convolutional-layer architecture with Batch Normalization and Dropout ($0.1$ to $0.4$) to eliminate overfitting.
+  - Channels: $64 \to 128 \to 256 \to 512$ with $3 \times 3$ local receptive fields and translation equivariance (~2.4M parameters).
+  - Target single-branch performance: **~92% to 94%** on CIFAR-10.
+  - Projects to a normalized **128-dimensional penultimate expertise feature vector** (`feat`).
+- **ViT Branch (`02_vit_branch.ipynb` — `VisionTransformer`)**:
+  - 6-layer Vision Transformer with 4 attention heads, Pre-LayerNorm, GELU, and $4 \times 4$ patch resolution (64 patches, ~1.2M parameters).
+  - Models global cross-patch relationships via multi-head self-attention without built-in spatial locality priors.
+  - Penultimate `LayerNorm` output from the `[CLS]` token projects to the identical **128-dimensional expertise feature vector**.
 
 ### 2. Reinforcement Learning Fusion Formulation (`03_fusion_rl.ipynb`)
 - **State ($s$)**: Class context (ground-truth class $y$ during calibration; two-pass proxy consensus $\hat{y}_0$ at inference).
@@ -21,7 +27,7 @@ This repository contains the complete implementation, calibration pipeline, and 
   $$w_{\text{cnn}}[s] = w_{\min} + (w_{\max} - w_{\min}) \cdot \sigma(k \cdot \Delta Q[s] \cdot c[s])$$
 
 ### 3. Theoretical Rationale for Algorithm Design
-- **Why Multi-Armed Bandit UCB Arm-Selection Was Rejected**: Classic UCB arm-selection assumes partial feedback (only observing the chosen arm). In this fusion framework, correctness and softmax probabilities from **both** models are simultaneously observed (full-information setting). UCB's $1/\sqrt{n}$ uncertainty insight is preserved as a **confidence-shrinkage factor** to anchor low-sample classes to the prior ($w=0.5$).
+- **Why Multi-Armed Bandit UCB Arm-Selection Was Rejected**: Classic UCB arm-selection assumes partial feedback (only observing the chosen arm). In this fusion framework, correctness and softmax probabilities from **both** models are simultaneously observed (full-information setting). UCB's $1/\sqrt{n}$ uncertainty insight is preserved as a **confidence-shrinkage factor** to anchor low-sample classes to the unbiased prior ($w=0.5$).
 - **Why Constant-LR Multiplicative Weights (Hedge) Was Rejected**: Constant step-size multiplicative weights is a martingale in log-odds space with no mean reversion; under equal skill it random-walks to extreme weights. Under stationary model skill, a decreasing step size $\alpha_n = 1/n$ (running sample mean) provably converges under the **Robbins-Monro condition**.
 - **Sigmoid Saturation Link**: Unlike unbounded functions like $\log(x)$, the sigmoid function has true horizontal asymptotes, strictly enforcing $w \in [w_{\min}, w_{\max}] = [0.05, 0.95]$.
 
@@ -31,8 +37,8 @@ This repository contains the complete implementation, calibration pipeline, and 
 
 ```
 Research_Work_JU/
-├── 01_cnn_branch.ipynb         # CNN branch (CIFAR-10 Feature Set A)
-├── 02_vit_branch.ipynb         # Vision Transformer branch (CIFAR-10 Feature Set B)
+├── 01_cnn_branch.ipynb         # High-capacity VGG-BN branch (CIFAR-10 Feature Set A)
+├── 02_vit_branch.ipynb         # 6-layer Vision Transformer branch (CIFAR-10 Feature Set B)
 ├── 03_fusion_rl.ipynb          # RL adaptive fusion & ablation evaluation
 ├── environment.yml             # Conda environment definition (torch_fusion_env)
 ├── requirements.txt            # Python dependencies
@@ -73,45 +79,15 @@ To guarantee zero data leakage and withstand reviewer scrutiny, CIFAR-10 is part
 
 ---
 
-## 📊 Benchmark Evaluation Results
+## 🚀 Execution Guide on Kaggle (Free T4 GPU — ~2 Minutes)
 
-| Method / Configuration | Test Accuracy (%) | State Space | Adaptive |
-|---|---|---|---|
-| **1. CNN Branch Only** | 78.75% | None | No |
-| **2. ViT Branch Only** | 97.00% | None | No |
-| **3. Naive 50/50 Fixed Ensemble** | 98.50% | None | No |
-| **4. Single Global Weight (Ablation)** | 97.62% | Single Global | Yes |
-| **5. Per-Class Contextual RL Fusion (Ours)** | **98.25%** | **Per-Class Context** | **Yes** |
-
-- **State Context Gain (Per-Class vs. Global Single State)**: $+0.62\%$
-- **Initialization Invariant Unit Test**: Asserts $w_{\text{cnn}}[s] == 0.50$ and $w_{\text{vit}}[s] == 0.50$ for all unvisited classes.
-
----
-
-## 🚀 Reproduction Guide
-
-### Option A: Local Execution (Anaconda)
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/<username>/Research_Work_JU.git
-   cd Research_Work_JU
-   ```
-2. Create and activate the conda environment:
-   ```bash
-   conda env create -f environment.yml
-   conda activate torch_fusion_env
-   ```
-3. Launch Jupyter Notebook:
-   ```bash
-   jupyter notebook
-   ```
-4. Run `01_cnn_branch.ipynb` $\rightarrow$ `02_vit_branch.ipynb` $\rightarrow$ `03_fusion_rl.ipynb`.
-
-### Option B: Cloud GPU Acceleration (Kaggle / Colab)
-1. Upload `01_cnn_branch.ipynb` and `02_vit_branch.ipynb` to Kaggle.
-2. Select **GPU T4 x2** accelerator and toggle **Internet ON**.
-3. Run both notebooks (takes ~2 minutes each on T4 GPU) and download the generated `.pt` export files.
-4. Run `03_fusion_rl.ipynb` with the exported `.pt` files to compute calibrated weights, generate plots, and report the final benchmark table.
+1. Open [kaggle.com](https://www.kaggle.com) $\rightarrow$ **Create** $\rightarrow$ **New Notebook**.
+2. Click **File** $\rightarrow$ **Upload Notebook** $\rightarrow$ Select `01_cnn_branch.ipynb` (or import directly from `One-Hat/Research_Work_JU`).
+3. Set **Accelerator** to **GPU T4 x2** and toggle **Internet ON**.
+4. Click **Run All** (trains 50 epochs in ~90 seconds!).
+5. Download `cnn_val_export.pt` and `cnn_test_export.pt` from the right-hand **Output** tab.
+6. Repeat for `02_vit_branch.ipynb` to download `vit_val_export.pt` and `vit_test_export.pt`.
+7. Run `03_fusion_rl.ipynb` (locally or on Kaggle, executes in under 2 seconds) to compute calibrated weights, save plots, and view the final benchmark table!
 
 ---
 
