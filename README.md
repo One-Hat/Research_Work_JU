@@ -44,9 +44,21 @@ Research_Work_JU/
 ├── requirements.txt            # Python dependencies
 ├── fusion_sar_log.csv          # Logged (S, A, R) state-action-reward transitions
 ├── fusion_weight_calibration_plots.png # Calibration bar charts & saturation curves
+├── per_class_f1_comparison.png # Per-class F1-score comparison (CNN vs. ViT vs. RL Fused)
+├── confusion_matrix_fused.png  # Normalized confusion matrix heatmap for RL Fused model
 ├── .gitignore                  # Git ignore rules
 └── README.md                   # Research documentation
 ```
+
+---
+
+## 📊 Comprehensive Multi-Metric Evaluation
+
+In addition to top-1 classification accuracy, the pipeline computes and reports a complete suite of publication-ready metrics on the 10,000-sample test set:
+- **Macro-Averaged Precision, Recall, and F1-Score**: Evaluates balanced multi-class performance without favoring high-frequency classes.
+- **Granular Per-Class F1 Breakdown**: Inspects individual class trade-offs (e.g., *airplane*, *automobile*, *bird*, *cat*, *deer*, *dog*, *frog*, *horse*, *ship*, *truck*), quantifying exact F1 deltas against the best single branch.
+- **Normalized Confusion Matrix Heatmap**: Row-normalized confusion matrix (`confusion_matrix_fused.png`) displaying per-class recall and error distributions.
+- **State-Action-Reward Transition Log**: Full CSV dump (`fusion_sar_log.csv`) of every calibration transition: state context $s$, CNN reward $r_{\text{cnn}}$, ViT reward $r_{\text{vit}}$, running expectations $Q_{\text{cnn}}, Q_{\text{vit}}$, advantage $\Delta Q$, confidence shrinkage $c$, and calibrated weight $w_{\text{cnn}}$.
 
 ---
 
@@ -83,13 +95,23 @@ To guarantee zero data leakage and withstand reviewer scrutiny, CIFAR-10 is part
 
 1. Open [kaggle.com](https://www.kaggle.com) $\rightarrow$ **Create** $\rightarrow$ **New Notebook**.
 2. Click **File** $\rightarrow$ **Upload Notebook** $\rightarrow$ Select `01_cnn_branch.ipynb` (or import directly from `One-Hat/Research_Work_JU`).
-3. Set **Accelerator** to **GPU T4 x2** and toggle **Internet ON**.
+3. Set **Accelerator** to **GPU T4 x2** and toggle **Internet ON** (in the right-hand *Settings* sidebar).
 4. Click **Run All** (trains 50 epochs in ~90 seconds!).
 5. Download `cnn_val_export.pt` and `cnn_test_export.pt` from the right-hand **Output** tab.
 6. Repeat for `02_vit_branch.ipynb` to download `vit_val_export.pt` and `vit_test_export.pt`.
-7. Run `03_fusion_rl.ipynb` (locally or on Kaggle, executes in under 2 seconds) to compute calibrated weights, save plots, and view the final benchmark table!
+7. Run `03_fusion_rl.ipynb` (locally in `torch_fusion_env` or on Kaggle — executes in under 2 seconds) to compute calibrated weights, save high-resolution publication figures (`per_class_f1_comparison.png`, `confusion_matrix_fused.png`, `fusion_weight_calibration_plots.png`), and generate the transition CSV (`fusion_sar_log.csv`).
+
+---
+
+## 🎓 Sharing with Seniors & Academic Advisors
+
+This codebase is specifically structured for academic peer review and faculty inspection:
+- **Theoretical Rigor**: Section 2 of `03_fusion_rl.ipynb` and `README.md` documents the exact mathematical formulation, including proof justifications for Robbins-Monro sample-mean convergence and the rejection of standard multi-armed bandit / hedge methods.
+- **Zero Leakage Integrity**: The 4-way split design guarantees that the RL fusion module never observes training or test samples during weight calibration.
+- **Reproducibility**: All random seeds are fixed (`seed=42`), dependency files (`environment.yml`, `requirements.txt`) are pinned, and pure NumPy metric implementations remove external library divergence.
 
 ---
 
 ## 📜 License
 MIT License
+
