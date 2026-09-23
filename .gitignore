@@ -10,6 +10,7 @@ data/
 
 # Checkpoints & Model weights
 *.pt
+!*_export.pt
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
