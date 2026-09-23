@@ -2,6 +2,8 @@
 
 This repository contains the implementation, calibration pipeline, and experimental evaluation for an adaptive, per-class Reinforcement Learning (RL) fusion framework combining the complementary inductive biases of a Convolutional Neural Network (VGG-BN) and a Vision Transformer (ViT) on CIFAR-10.
 
+> 📽️ **Interactive Slide Deck**: Open [`presentation.html`](./presentation.html) in any browser for a motion-based presentation explaining the intuition, architecture, and mathematical formulation, featuring a live interactive weight simulator!
+
 ---
 
 ## Overview & Architecture
@@ -49,6 +51,8 @@ Research_Work_JU/
 ├── 01_cnn_branch.ipynb         # VGG-BN branch training and feature export
 ├── 02_vit_branch.ipynb         # 6-layer ViT branch training and feature export
 ├── 03_fusion_rl.ipynb          # Adaptive RL fusion, benchmarking, and ablation
+├── presentation.html           # Interactive motion-based presentation deck
+├── index.html                  # Standalone entry point (GitHub Pages ready)
 ├── environment.yml             # Conda environment definition
 ├── requirements.txt            # Python dependencies
 ├── fusion_sar_log.csv          # State-action-reward transition log

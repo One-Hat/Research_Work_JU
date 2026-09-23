@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adaptive RL Fusion for Vision Architectures | Research Presentation</title>
+  <style>
+    :root {
+      --bg-dark: #070913;
+      --bg-card: rgba(18, 24, 43, 0.75);
+      --bg-card-border: rgba(99, 102, 241, 0.25);
+      --bg-card-hover: rgba(28, 36, 64, 0.85);
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
+    }
+
+    /* Top Progress Bar */
+    .progress-container {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 12.5%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue), var(--accent-purple));
+      transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.8);
+    }
+
+    /* Deck Viewport */
+    .deck-viewport {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Slides */
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 3.5rem 5rem 6rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      transform: translateX(60px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .slide.prev {
+      opacity: 0;
+      transform: translateX(-60px) scale(0.98);
+    }
+
+    /* Headers */
+    .slide-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      width: fit-content;
+    }
+
+    .slide-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    .slide-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 850px;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+
+    /* Cards & Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      width: 100%;
+      align-items: stretch;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.25rem;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--card-accent, var(--accent-blue)), transparent);
+      opacity: 0.6;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(99, 102, 241, 0.45);
+      transform: translateY(-3px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.15);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-body {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .card-body ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .card-body li {
+      position: relative;
+      padding-left: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-body li::before {
+      content: "•";
+      color: var(--card-accent, var(--accent-cyan));
+      font-weight: bold;
+      position: absolute;
+      left: 0.25rem;
+    }
+
+    /* Math Formula Block */
+    .math-pill {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.6rem;
+      padding: 0.85rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      color: #38bdf8;
+      margin: 0.75rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Interactive Simulator */
+    .simulator-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 1.75rem;
+      align-items: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .slider-group {
+      margin-bottom: 1rem;
+    }
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+    .slider-label span.val {
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+    .slider-control {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #1e293b;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+    .slider-control::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    /* Weight Output Meter */
+    .meter-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.85rem;
+      padding: 1.25rem;
+    }
+    .meter-bar-wrapper {
+      width: 100%;
+      height: 28px;
+      background: #1e293b;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      margin: 1rem 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .meter-cnn {
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #38bdf8);
+      transition: width 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: white;
+    }
+    .meter-vit {
+      height: 100%;
+      background: linear-gradient(90deg, #f97316, #fb923c);
+      transition: width 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    /* Architecture Flow Graphic */
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 0;
+    }
+    .arch-node {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+      flex: 1;
+      position: relative;
+    }
+    .arch-arrow {
+      color: var(--accent-cyan);
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+
+    /* Floating Dock Navigation */
+    .dock {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 0.5rem 1.25rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+    }
+
+    .dock-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .dock-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--accent-cyan);
+    }
+    .dock-counter {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* Modal / Overview Grid */
+    .overview-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 9, 19, 0.95);
+      backdrop-filter: blur(20px);
+      z-index: 200;
+      display: none;
+      padding: 3rem;
+      overflow-y: auto;
+    }
+    .overview-modal.active {
+      display: block;
+    }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 2rem auto;
+    }
+    .overview-thumb {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .overview-thumb:hover {
+      border-color: var(--accent-cyan);
+      transform: scale(1.03);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+    .thumb-num {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+    }
+    .thumb-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Key shortcut pills */
+    .key-pill {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: #cbd5e1;
+    }
+
+    /* Hero Slide Animations */
+    .hero-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.85rem 1.75rem;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      border-radius: 9999px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
+      transition: all 0.3s;
+      margin-top: 1.5rem;
+      width: fit-content;
+    }
+    .hero-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 35px rgba(139, 92, 246, 0.7);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- Viewport -->
+  <div class="deck-viewport" id="viewport">
+
+    <!-- SLIDE 1: Title -->
+    <div class="slide active" data-slide="1">
+      <div class="slide-badge">Research Work • Deep Learning & Computer Vision</div>
+      <h1 class="slide-title" style="font-size: 3rem;">Adaptive Reinforcement Learning Fusion<br>for Hybrid Vision Architectures</h1>
+      <p class="slide-subtitle">
+        Dynamically combining the complementary inductive biases of High-Capacity <strong>VGG-BN</strong> and <strong>Vision Transformers (ViT)</strong> on CIFAR-10 via per-class contextual arbitration.
+      </p>
+
+      <div class="grid-3" style="max-width: 950px; margin-top: 0.5rem;">
+        <div class="card" style="--card-accent: var(--accent-cyan); padding: 1.25rem;">
+          <div class="card-title" style="font-size: 1.05rem;">🏛️ Institution</div>
+          <div class="card-body">Jadavpur University<br><span style="font-size: 0.85rem; color: var(--text-dim);">Department of Computer Science & Engineering</span></div>
+        </div>
+        <div class="card" style="--card-accent: var(--accent-blue); padding: 1.25rem;">
+          <div class="card-title" style="font-size: 1.05rem;">⚖️ Dual Inductive Bias</div>
+          <div class="card-body">Translation Equivariance (CNN) + Global Attention (ViT)</div>
+        </div>
+        <div class="card" style="--card-accent: var(--accent-emerald); padding: 1.25rem;">
+          <div class="card-title" style="font-size: 1.05rem;">🎯 Key Principle</div>
+          <div class="card-body">Sample-Mean Advantage with Proven Robbins-Monro Convergence</div>
+        </div>
+      </div>
+
+      <button class="hero-btn" onclick="nextSlide()">
+        <span>Explore Architecture & Math</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+
+      <div style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-dim); display: flex; gap: 1rem; align-items: center;">
+        <span>Press <span class="key-pill">Space</span> or <span class="key-pill">→</span> to navigate</span>
+        <span>•</span>
+        <span>Press <span class="key-pill">O</span> for Slide Grid</span>
+        <span>•</span>
+        <span>Press <span class="key-pill">F</span> for Fullscreen</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Core Dilemma -->
+    <div class="slide" data-slide="2">
+      <div class="slide-badge">1. The Problem Space</div>
+      <h2 class="slide-title">Why Single Vision Models Plateau</h2>
+      <p class="slide-subtitle">
+        CNNs and Vision Transformers excel at fundamentally different spatial representations. Neither architecture is universally optimal across all semantic categories.
+      </p>
+
+      <div class="grid-2">
+        <div class="card" style="--card-accent: #38bdf8;">
+          <div class="card-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            Convolutional Branch (VGG-BN)
+          </div>
+          <div class="card-body">
+            <ul>
+              <li><strong>Inductive Bias</strong>: Compact local receptive fields, spatial translation equivariance.</li>
+              <li><strong>Strengths</strong>: Superb extraction of fine-grained textures, boundaries, low data hunger.</li>
+              <li><strong>Inherent Flaw</strong>: Blind to long-range context without deep stacks of downsampling; rigid spatial priors.</li>
+              <li><strong>Target Accuracy</strong>: ~92%–94% on CIFAR-10.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: #f97316;">
+          <div class="card-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+            Vision Transformer (ViT)
+          </div>
+          <div class="card-body">
+            <ul>
+              <li><strong>Inductive Bias</strong>: All-to-all patch self-attention across 64 patches ($4 \times 4$).</li>
+              <li><strong>Strengths</strong>: Dynamic global relationship routing, flexible long-range geometric associations.</li>
+              <li><strong>Inherent Flaw</strong>: Lacks built-in 2D spatial locality; requires large datasets or careful tuning on small images.</li>
+              <li><strong>Target Accuracy</strong>: ~88%–91% on CIFAR-10.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="math-pill" style="margin-top: 1.5rem; text-align: center;">
+        💡 Core Research Question: Can we learn a continuous arbitration policy that dynamically shifts weight to the stronger model for each class and instance?
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Architecture -->
+    <div class="slide" data-slide="3">
+      <div class="slide-badge">2. System Architecture</div>
+      <h2 class="slide-title">Dual-Branch Symmetric Expertise Pipeline</h2>
+      <p class="slide-subtitle">
+        Both branches process raw $32 \times 32$ images in parallel and project to a standardized 128-dimensional penultimate representation before decision arbitration.
+      </p>
+
+      <div class="arch-flow">
+        <div class="arch-node" style="border-color: rgba(255, 255, 255, 0.2);">
+          <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.3rem;">INPUT</div>
+          <div style="font-weight: 700; color: #fff;">CIFAR-10</div>
+          <div style="font-size: 0.8rem; color: var(--accent-cyan);">32×32 RGB</div>
+        </div>
+
+        <div class="arch-arrow">➔</div>
+
+        <div class="arch-node" style="border-color: #38bdf8; flex: 1.3;">
+          <div style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 0.3rem;">BRANCH 1</div>
+          <div style="font-weight: 700; color: #fff;">VGG-BN (7-Conv)</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">64→128→256→512 channels (~2.4M params)</div>
+          <div class="math-pill" style="margin: 0.4rem 0 0; padding: 0.3rem; font-size: 0.8rem;">Projection: 128-d Vector</div>
+        </div>
+
+        <div class="arch-arrow">➔</div>
+
+        <div class="arch-node" style="border-color: var(--accent-purple); flex: 1.2;">
+          <div style="font-size: 0.8rem; color: var(--accent-purple); margin-bottom: 0.3rem;">FUSION MODULE</div>
+          <div style="font-weight: 700; color: #fff;">Contextual RL Gating</div>
+          <div style="font-size: 0.8rem; color: var(--accent-emerald);">w_cnn · P_cnn + w_vit · P_vit</div>
+          <div class="math-pill" style="margin: 0.4rem 0 0; padding: 0.3rem; font-size: 0.8rem; color: var(--accent-emerald);">Final Class ŷ</div>
+        </div>
+
+        <div class="arch-arrow">➔</div>
+
+        <div class="arch-node" style="border-color: #f97316; flex: 1.3;">
+          <div style="font-size: 0.8rem; color: #f97316; margin-bottom: 0.3rem;">BRANCH 2</div>
+          <div style="font-weight: 700; color: #fff;">ViT (6-Layer, 4-Head)</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">64 Patches (4×4) + Pre-LN (~1.2M params)</div>
+          <div class="math-pill" style="margin: 0.4rem 0 0; padding: 0.3rem; font-size: 0.8rem;">Projection: 128-d [CLS]</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 1rem;">
+        <div class="card" style="padding: 1rem;">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 0.3rem;">Standardized I/O Contract</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">
+            Each branch exports: <code>{"embedding": (N,128), "probs": (N,10), "pred": (N,), "label": (N,), "correct": (N,)}</code> guaranteeing plug-and-play modularity.
+          </div>
+        </div>
+        <div class="card" style="padding: 1rem;">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 0.3rem;">Symmetric Representation</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">
+            Enforcing identical 128-d penultimate representations ensures equal semantic capacity before continuous weight assignment.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Why Standard Ensembles Fail -->
+    <div class="slide" data-slide="4">
+      <div class="slide-badge">3. Theoretical Rationale</div>
+      <h2 class="slide-title">Why Standard Ensembling & Bandits Fail</h2>
+      <p class="slide-subtitle">
+        We evaluated standard ensembling and bandit algorithms in simulation and rejected them for fundamental mathematical shortcomings.
+      </p>
+
+      <div class="grid-3">
+        <div class="card" style="--card-accent: var(--accent-rose);">
+          <div class="card-title" style="color: var(--accent-rose);">❌ Naive 50/50 Ensemble</div>
+          <div class="card-body">
+            <ul>
+              <li><strong>Static Prior</strong>: Assumes both models are equally skilled on all semantic classes.</li>
+              <li><strong>Failure Mode</strong>: When CNN is 94% on textures but ViT is 75%, a fixed 50/50 mix drags down the accurate branch.</li>
+              <li><strong>Lacks Adaptability</strong>: Zero context awareness.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: var(--accent-amber);">
+          <div class="card-title" style="color: var(--accent-amber);">❌ Multiplicative Weights (Hedge)</div>
+          <div class="card-body">
+            <ul>
+              <li><strong>Update Rule</strong>: $w_t \propto w_{t-1} e^{\eta r_t}$ with constant learning rate $\eta$.</li>
+              <li><strong>Failure Mode</strong>: Martingale in log-odds space with <strong>no mean reversion</strong>.</li>
+              <li><strong>Random Walk</strong>: Even under equal true skill, it inevitably drifts to extreme weights ($0.0$ or $1.0$) purely from noise.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: var(--accent-purple);">
+          <div class="card-title" style="color: var(--accent-purple);">❌ Classic Bandit UCB</div>
+          <div class="card-body">
+            <ul>
+              <li><strong>Mismatched Setting</strong>: UCB arm-selection assumes <em>partial feedback</em> (only chosen arm is observed).</li>
+              <li><strong>Our Setting</strong>: Both branches output full softmax probabilities simultaneously (<em>full information</em>).</li>
+              <li><strong>Our Adaptation</strong>: We repurpose UCB's $1/\sqrt{n}$ uncertainty insight into a <strong>confidence shrinkage regularizer</strong>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="math-pill" style="margin-top: 1.25rem;">
+        Robbins-Monro Condition: Step size αₙ = 1/n (exact running sample mean) guarantees asymptotic convergence under stationary model skill!
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Interactive Simulator -->
+    <div class="slide" data-slide="5">
+      <div class="slide-badge">4. Interactive Formulation</div>
+      <h2 class="slide-title">Reinforcement Learning Calibration Simulator</h2>
+      <p class="slide-subtitle">
+        Drag the sliders below to explore how the Robbins-Monro advantage, sample count, and temperature jointly govern the continuous fusion weight.
+      </p>
+
+      <div class="simulator-box">
+        <!-- Controls -->
+        <div>
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>Advantage ΔQ[s] = Q_cnn[s] - Q_vit[s]</span>
+              <span class="val" id="valAdv">+0.30</span>
+            </div>
+            <input type="range" class="slider-control" id="sliderAdv" min="-1.0" max="1.0" step="0.05" value="0.30" oninput="updateSim()">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>Calibration Samples Observed (n[s])</span>
+              <span class="val" id="valN">45</span>
+            </div>
+            <input type="range" class="slider-control" id="sliderN" min="0" max="100" step="1" value="45" oninput="updateSim()">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>Sigmoid Steepness (k)</span>
+              <span class="val" id="valK">2.0</span>
+            </div>
+            <input type="range" class="slider-control" id="sliderK" min="0.5" max="4.0" step="0.1" value="2.0" oninput="updateSim()">
+          </div>
+
+          <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem;">
+            Safety Bounds: w_min = 0.05, w_max = 0.95 | Threshold n₀ = 30 samples
+          </div>
+        </div>
+
+        <!-- Meter Display -->
+        <div class="meter-container">
+          <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.85rem; color: var(--text-muted);">
+            <span>CNN Weight (w_cnn)</span>
+            <span>ViT Weight (w_vit)</span>
+          </div>
+
+          <div class="meter-bar-wrapper">
+            <div class="meter-cnn" id="barCnn" style="width: 68%;">68%</div>
+            <div class="meter-vit" id="barVit" style="width: 32%;">32%</div>
+          </div>
+
+          <div class="math-pill" style="width: 100%; font-size: 0.82rem; margin: 0.4rem 0;">
+            Confidence: c[s] = min(1.0, n/30) = <span id="valConf" style="color: var(--accent-emerald); font-weight: bold; margin-left: 0.3rem;">1.00</span>
+          </div>
+
+          <div style="font-size: 0.82rem; color: var(--text-muted); text-align: center; margin-top: 0.25rem;">
+            Formula: <code>w_cnn = 0.05 + 0.90 · σ(k · ΔQ · c)</code>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 1rem; text-align: center;">
+        Notice: When sample count <span class="key-pill">n = 0</span>, confidence <span class="key-pill">c = 0</span>, smoothly collapsing weights to the exact neutral prior <span class="key-pill">50% / 50%</span>!
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Two-Pass Inference -->
+    <div class="slide" data-slide="6">
+      <div class="slide-badge">5. Test-Time Protocol</div>
+      <h2 class="slide-title">Two-Pass Contextual Proxy State Inference</h2>
+      <p class="slide-subtitle">
+        At inference, the true label $y$ is unknown. We resolve this chicken-and-egg problem using a fast two-pass proxy consensus mechanism.
+      </p>
+
+      <div class="grid-3">
+        <div class="card" style="--card-accent: var(--accent-cyan);">
+          <div class="card-title">Pass 1: Rough Consensus</div>
+          <div class="card-body">
+            Compute an unweighted average of class probabilities:
+            <div class="math-pill" style="font-size: 0.82rem;">
+              ŷ₀ = argmax(0.5 · P_cnn + 0.5 · P_vit)
+            </div>
+            This provisional class index $\hat{y}_0$ acts as our <strong>proxy contextual state</strong> $s$.
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: var(--accent-amber);">
+          <div class="card-title">Pass 2: Confidence Verification</div>
+          <div class="card-body">
+            Look up calibrated weight $w[\hat{y}_0]$. Verify calibration confidence:
+            <div class="math-pill" style="font-size: 0.82rem;">
+              if c[ŷ₀] < 0.3 ➔ Fallback
+            </div>
+            If calibration had sparse observations for state $\hat{y}_0$, fall back to global pooled weights $(w_c^{\text{global}}, w_v^{\text{global}})$.
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: var(--accent-emerald);">
+          <div class="card-title">Pass 3: Final Fused Decision</div>
+          <div class="card-body">
+            Apply calibrated contextual weights to original probabilities:
+            <div class="math-pill" style="font-size: 0.82rem;">
+              ŷ = argmax(w_c[ŷ₀]·P_c + w_v[ŷ₀]·P_v)
+            </div>
+            Produces final prediction with zero additional model forward passes!
+          </div>
+        </div>
+      </div>
+
+      <div class="math-pill" style="margin-top: 1.5rem; text-align: center;">
+        ⚡ Computational Overhead: The entire two-pass arbitration is an O(1) table lookup requiring &lt; 0.05 ms per sample.
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Experimental Discipline -->
+    <div class="slide" data-slide="7">
+      <div class="slide-badge">6. Empirical Validation</div>
+      <h2 class="slide-title">Strict 4-Way Splitting & Multi-Metric Evaluation</h2>
+      <p class="slide-subtitle">
+        To withstand peer review scrutiny and eliminate data leakage, we enforce an airtight 4-way partition on CIFAR-10.
+      </p>
+
+      <div class="grid-2">
+        <div class="card" style="--card-accent: var(--accent-blue);">
+          <div class="card-title">🛡️ Data-Split Partitioning (Seed = 42)</div>
+          <div class="card-body">
+            <ul>
+              <li><strong>Train Set (40,000)</strong>: Gradients & weight updates with random crop/flip augmentations.</li>
+              <li><strong>Monitor Set (5,000)</strong>: Unaugmented validation set for epoch tracking & saving <code>best_checkpoint.pt</code>.</li>
+              <li><strong>RL Val Set (5,000)</strong>: <em>Completely isolated during training.</em> Reserved strictly for calibrating the RL weights.</li>
+              <li><strong>Test Set (10,000)</strong>: Official CIFAR-10 test set evaluated exactly once for final reported benchmarks.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: var(--accent-emerald);">
+          <div class="card-title">📊 Multi-Metric Evaluation Suite</div>
+          <div class="card-body">
+            <ul>
+              <li><strong>Accuracy & Macro-F1</strong>: Equal weighting across all 10 classes to evaluate balanced generalization.</li>
+              <li><strong>Macro-Precision & Recall</strong>: Detailed false-positive vs false-negative profiling.</li>
+              <li><strong>Per-Class Breakdown</strong>: Granular F1 deltas vs best single branch (revealing where CNN vs ViT dominate).</li>
+              <li><strong>Normalized Confusion Matrix</strong>: Heatmap quantifying class recall and misclassification corridors.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="math-pill" style="margin-top: 1.25rem;">
+        Zero Leakage Guarantee: The RL calibration module never observes training or test samples.
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Takeaways & Discussion -->
+    <div class="slide" data-slide="8">
+      <div class="slide-badge">7. Conclusion & Roadmap</div>
+      <h2 class="slide-title">Key Research Contributions & Next Steps</h2>
+      <p class="slide-subtitle">
+        Summary of the proposed framework and strategic extensions for high-impact publication.
+      </p>
+
+      <div class="grid-3">
+        <div class="card" style="--card-accent: var(--accent-cyan);">
+          <div class="card-title">🎯 Core Achievements</div>
+          <div class="card-body">
+            <ul>
+              <li>Principled mathematical arbitration via Robbins-Monro convergence.</li>
+              <li>Elimination of martingale random walk observed in multiplicative weights.</li>
+              <li>Synergistic per-class fusion surpassing both individual branches.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: var(--accent-purple);">
+          <div class="card-title">🔬 Publication Extensions</div>
+          <div class="card-body">
+            <ul>
+              <li><strong>CIFAR-10-C</strong>: Out-of-distribution robustness under corruptions (noise, blur, fog).</li>
+              <li><strong>Expected Calibration Error (ECE)</strong>: Reliability diagrams measuring overconfidence reduction.</li>
+              <li><strong>Ablation Table</strong>: Comparing against static stacking and feature concatenation.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="--card-accent: var(--accent-emerald);">
+          <div class="card-title">💻 Open Source & Reproducible</div>
+          <div class="card-body">
+            <ul>
+              <li>Standardized PyTorch contracts & seed consistency.</li>
+              <li>Pure NumPy metric implementation without third-party skew.</li>
+              <li>Turnkey execution on Kaggle T4 GPUs in &lt; 5 minutes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <a href="https://github.com/One-Hat/Research_Work_JU" target="_blank" style="color: var(--accent-cyan); text-decoration: none; font-weight: 700; font-size: 1.1rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(6, 182, 212, 0.1); padding: 0.6rem 1.2rem; border-radius: 9999px; border: 1px solid rgba(6, 182, 212, 0.3);">
+          <span>GitHub: github.com/One-Hat/Research_Work_JU</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Floating Dock -->
+  <div class="dock">
+    <button class="dock-btn" onclick="prevSlide()" title="Previous Slide (←)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+
+    <div class="dock-counter" id="slideCounter">1 / 8</div>
+
+    <button class="dock-btn" onclick="nextSlide()" title="Next Slide (→ or Space)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+
+    <div style="width: 1px; height: 20px; background: rgba(255, 255, 255, 0.15); margin: 0 0.25rem;"></div>
+
+    <button class="dock-btn" onclick="toggleOverview()" title="Slide Overview (O)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </button>
+
+    <button class="dock-btn" onclick="toggleFullscreen()" title="Fullscreen (F)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+    </button>
+  </div>
+
+  <!-- Overview Modal -->
+  <div class="overview-modal" id="overviewModal">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="font-size: 1.5rem; font-weight: 700; color: #fff;">Slide Deck Overview</h3>
+      <button class="dock-btn" onclick="toggleOverview()" style="background: rgba(255,255,255,0.1); width: 40px; height: 40px;">✕</button>
+    </div>
+    <div class="overview-grid" id="overviewGrid">
+      <!-- Populated dynamically via JS -->
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 8;
+    const slides = document.querySelectorAll('.slide');
+    const progressBar = document.getElementById('progressBar');
+    const slideCounter = document.getElementById('slideCounter');
+    const overviewModal = document.getElementById('overviewModal');
+
+    function updateSlide() {
+      slides.forEach((s, idx) => {
+        const slideNum = idx + 1;
+        s.classList.remove('active', 'prev');
+        if (slideNum === currentSlide) {
+          s.classList.add('active');
+        } else if (slideNum < currentSlide) {
+          s.classList.add('prev');
+        }
+      });
+
+      progressBar.style.width = `${(currentSlide / totalSlides) * 100}%`;
+      slideCounter.innerText = `${currentSlide} / ${totalSlides}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function goToSlide(n) {
+      if (n >= 1 && n <= totalSlides) {
+        currentSlide = n;
+        updateSlide();
+        if (overviewModal.classList.contains('active')) {
+          toggleOverview();
+        }
+      }
+    }
+
+    function toggleOverview() {
+      overviewModal.classList.toggle('active');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+      } else {
+        document.exitFullscreen().catch(err => console.log(err));
+      }
+    }
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'o' || e.key === 'O') {
+        toggleOverview();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      } else if (e.key === 'Escape' && overviewModal.classList.contains('active')) {
+        toggleOverview();
+      }
+    });
+
+    // Populate Overview Grid
+    const overviewGrid = document.getElementById('overviewGrid');
+    const slideTitles = [
+      "Title & Research Vision",
+      "The Inductive Bias Dilemma",
+      "Dual-Branch Architecture",
+      "Why Standard Ensembles Fail",
+      "RL Calibration Simulator",
+      "Two-Pass Proxy Inference",
+      "4-Way Split & Multi-Metric Suite",
+      "Key Takeaways & Publication Plan"
+    ];
+
+    slideTitles.forEach((t, i) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'overview-thumb';
+      thumb.innerHTML = `
+        <div class="thumb-num">SLIDE 0${i + 1}</div>
+        <div class="thumb-title">${t}</div>
+        <div style="font-size: 0.75rem; color: var(--text-dim);">Click to jump</div>
+      `;
+      thumb.onclick = () => goToSlide(i + 1);
+      overviewGrid.appendChild(thumb);
+    });
+
+    // Interactive Simulator Math
+    function sigmoid(x) {
+      return 1.0 / (1.0 + Math.exp(-x));
+    }
+
+    function updateSim() {
+      const adv = parseFloat(document.getElementById('sliderAdv').value);
+      const n = parseInt(document.getElementById('sliderN').value);
+      const k = parseFloat(document.getElementById('sliderK').value);
+
+      document.getElementById('valAdv').innerText = (adv >= 0 ? '+' : '') + adv.toFixed(2);
+      document.getElementById('valN').innerText = n;
+      document.getElementById('valK').innerText = k.toFixed(1);
+
+      const n0 = 30.0;
+      const conf = Math.min(1.0, n / n0);
+      document.getElementById('valConf').innerText = conf.toFixed(2);
+
+      const w_min = 0.05;
+      const w_max = 0.95;
+      const sig = sigmoid(k * adv * conf);
+      const w_cnn = w_min + (w_max - w_min) * sig;
+      const w_vit = 1.0 - w_cnn;
+
+      const pctCnn = Math.round(w_cnn * 100);
+      const pctVit = 100 - pctCnn;
+
+      document.getElementById('barCnn').style.width = pctCnn + '%';
+      document.getElementById('barCnn').innerText = pctCnn + '%';
+      document.getElementById('barVit').style.width = pctVit + '%';
+      document.getElementById('barVit').innerText = pctVit + '%';
+    }
+
+    // Initialize
+    updateSlide();
+    updateSim();
+  </script>
+</body>
+</html>
