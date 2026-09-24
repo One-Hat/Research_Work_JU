@@ -1,6 +1,6 @@
 # Adaptive Reinforcement Learning Fusion for Hybrid Vision Architectures
 
-This repository contains the implementation, calibration pipeline, and experimental evaluation for an adaptive, per-class Reinforcement Learning (RL) fusion framework combining the complementary inductive biases of a Convolutional Neural Network (VGG-BN) and a Vision Transformer (ViT) on CIFAR-10.
+This repository contains the implementation, calibration pipeline, and experimental evaluation for an adaptive, per-class Reinforcement Learning (RL) fusion framework combining the complementary inductive biases of a Residual Convolutional Network (ResNet-18) and a Hierarchical Vision Transformer (Swin Transformer, Swin-T) on CIFAR-10.
 
 > 📽️ **Interactive Slide Deck**: Open [`presentation.html`](./presentation.html) in any browser for a motion-based presentation explaining the intuition, architecture, and mathematical formulation, featuring a live interactive weight simulator!
 
@@ -9,14 +9,14 @@ This repository contains the implementation, calibration pipeline, and experimen
 ## Overview & Architecture
 
 ### 1. Complementary Model Branches
-- **CNN Branch (`01_cnn_branch.ipynb` — `VGGCIFAR`)**:
-  - 7 convolutional layers across 4 hierarchical stages with Batch Normalization and progressive dropout ($0.1 \to 0.4$).
-  - Captures local spatial features and translation equivariance (~2.4M parameters).
-  - Projects to a 128-dimensional penultimate representation.
-- **ViT Branch (`02_vit_branch.ipynb` — `VisionTransformer`)**:
-  - 6-layer Vision Transformer with 4 attention heads, Pre-LayerNorm, GELU, and $4 \times 4$ patch resolution (64 patches, ~1.2M parameters).
-  - Captures global patch-to-patch interactions via multi-head self-attention.
-  - Penultimate `LayerNorm` output from the `[CLS]` token projects to the matching 128-dimensional representation.
+- **CNN Branch (`01_cnn_branch.ipynb` — `ResNetCIFAR`)**:
+  - Pretrained **ResNet-18** adapted with a 3×3 initial convolution and identity maxpooling tailored to preserve spatial details on CIFAR-10 (~11.2M parameters).
+  - Captures fine-grained local textures and translation equivariance.
+  - Linear projection head mapping penultimate 512-d representations to a standardized 128-d latent space.
+- **Swin Transformer Branch (`02_vit_branch.ipynb` — `SwinCIFAR`)**:
+  - Pretrained **Swin-T** (Swin Transformer Tiny) with shifted-window self-attention across 4 hierarchical stages (~28M parameters).
+  - Computes self-attention within local windows with cross-window connections, overcoming standard ViT data-hungriness while modeling hierarchical multi-scale context.
+  - Linear projection head mapping pooled 768-d representations to the identical 128-d latent space.
 
 ### 2. Reinforcement Learning Fusion Formulation (`03_fusion_rl.ipynb`)
 - **State ($s$)**: Class context ($s = y$ during calibration; two-pass consensus proxy $\hat{y}_0$ at inference).

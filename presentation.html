@@ -587,12 +587,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
     Adaptive <span class="highlight">Reinforcement Learning</span><br>Fusion for Hybrid Vision
   </h1>
   <p class="stagger slide-sub">
-    A per-class contextual arbitration framework that dynamically combines VGG-BN and Vision Transformer predictions using principled advantage estimation and sigmoid saturation.
+    A per-class contextual arbitration framework that dynamically combines ResNet-18 (local CNN) and Swin Transformer (hierarchical vision transformer) predictions using principled advantage estimation and sigmoid saturation.
   </p>
 
   <div class="stagger stat-row">
-    <div class="stat-item"><div class="stat-val" data-count="2.4">0</div><div class="stat-label">M CNN Params</div></div>
-    <div class="stat-item"><div class="stat-val" data-count="1.2">0</div><div class="stat-label">M ViT Params</div></div>
+    <div class="stat-item"><div class="stat-val" data-count="11.2">0</div><div class="stat-label">M ResNet Params</div></div>
+    <div class="stat-item"><div class="stat-val" data-count="28.3">0</div><div class="stat-label">M Swin Params</div></div>
     <div class="stat-item"><div class="stat-val" data-count="60">0</div><div class="stat-label">K Samples</div></div>
     <div class="stat-item"><div class="stat-val" data-count="10">0</div><div class="stat-label">Classes</div></div>
   </div>
@@ -609,30 +609,30 @@ input[type="range"]::-webkit-slider-thumb:hover {
 <div class="slide" data-slide="2">
   <div class="stagger tag">01 — Problem Space</div>
   <h2 class="stagger slide-title">Why <span class="highlight">Single Models</span> Hit a Ceiling</h2>
-  <p class="stagger slide-sub">CNNs and Vision Transformers encode fundamentally different spatial priors. Neither consistently dominates across all semantic categories.</p>
+  <p class="stagger slide-sub">Residual CNNs and Hierarchical Swin Transformers encode fundamentally different spatial priors. Neither consistently dominates across all semantic categories.</p>
 
   <div class="stagger g2">
     <div class="card" style="--card-accent: var(--blue);">
       <div class="card-icon" style="background:rgba(77,158,255,0.12); border-color:rgba(77,158,255,0.2);">🔲</div>
-      <div class="card-heading">VGG-BN Branch (CNN)</div>
+      <div class="card-heading">ResNet-18 Branch (CNN)</div>
       <div class="card-text">
         <ul>
-          <li>7 conv layers with 3×3 local receptive fields</li>
-          <li>Translation equivariance → strong on textures &amp; edges</li>
-          <li>Blind to long-range spatial relationships</li>
-          <li>~2.4M parameters | Expected: <strong>92–94%</strong></li>
+          <li>Residual bottleneck connections with 3×3 conv kernels</li>
+          <li>Translation equivariance → strong on textures &amp; edge priors</li>
+          <li>Local receptive fields limit global semantic awareness</li>
+          <li>~11.2M parameters | Pretrained on ImageNet-1K</li>
         </ul>
       </div>
     </div>
     <div class="card" style="--card-accent: var(--orange);">
       <div class="card-icon" style="background:rgba(255,159,67,0.12); border-color:rgba(255,159,67,0.2);">🌐</div>
-      <div class="card-heading">ViT Branch (Transformer)</div>
+      <div class="card-heading">Swin-T Branch (Transformer)</div>
       <div class="card-text">
         <ul>
-          <li>6-layer, 4-head self-attention across 64 patches</li>
-          <li>All-to-all routing → captures global context</li>
-          <li>No built-in 2D locality → trained from scratch on 32×32</li>
-          <li>~1.2M parameters | Test Accuracy: <strong>79.54%</strong></li>
+          <li>Shifted-window self-attention across 4 hierarchical stages</li>
+          <li>Linear complexity in image size + cross-window interaction</li>
+          <li>Overcomes standard ViT data inefficiency via local window priors</li>
+          <li>~28.3M parameters | Pretrained on ImageNet-1K</li>
         </ul>
       </div>
     </div>
@@ -658,14 +658,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
     <div class="flow-arrow">→</div>
     <div class="flow-node" style="border-color:rgba(77,158,255,0.3);">
       <div class="flow-node-label" style="color:var(--blue);">Branch 1</div>
-      <div class="flow-node-title">VGG-BN</div>
-      <div class="flow-node-detail">7-conv, 64→512 ch</div>
+      <div class="flow-node-title">ResNet-18</div>
+      <div class="flow-node-detail">Residual 4-stage</div>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-node" style="border-color:rgba(216,255,48,0.3);">
       <div class="flow-node-label">Projection</div>
       <div class="flow-node-title">128-d Vector</div>
-      <div class="flow-node-detail">Penultimate feat</div>
+      <div class="flow-node-detail">Linear + BN + ReLU</div>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-node" style="border-color:var(--accent); box-shadow:0 0 25px rgba(216,255,48,0.08);">
@@ -676,14 +676,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
     <div class="flow-arrow">←</div>
     <div class="flow-node" style="border-color:rgba(216,255,48,0.3);">
       <div class="flow-node-label">Projection</div>
-      <div class="flow-node-title">128-d [CLS]</div>
-      <div class="flow-node-detail">LayerNorm feat</div>
+      <div class="flow-node-title">128-d Vector</div>
+      <div class="flow-node-detail">Linear + BN + ReLU</div>
     </div>
     <div class="flow-arrow">←</div>
     <div class="flow-node" style="border-color:rgba(255,159,67,0.3);">
       <div class="flow-node-label" style="color:var(--orange);">Branch 2</div>
-      <div class="flow-node-title">ViT</div>
-      <div class="flow-node-detail">6-layer, 4-head</div>
+      <div class="flow-node-title">Swin-T</div>
+      <div class="flow-node-detail">Shifted Window Attn</div>
     </div>
   </div>
 
