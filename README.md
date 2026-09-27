@@ -2,7 +2,9 @@
 
 This repository contains the implementation, calibration pipeline, and experimental evaluation for an adaptive, per-class Reinforcement Learning (RL) fusion framework combining the complementary inductive biases of a Residual Convolutional Network (ResNet-18) and a Hierarchical Vision Transformer (Swin Transformer, Swin-T) on CIFAR-10.
 
-> 📽️ **Interactive Slide Deck**: Open [`presentation.html`](./presentation.html) in any browser for a motion-based presentation explaining the intuition, architecture, and mathematical formulation, featuring a live interactive weight simulator!
+> 📽️ **Interactive Slide Deck**: Open [`presentation.html`](./presentation.html) in any browser for a motion-based presentation explaining the intuition, architecture, and mathematical formulation, featuring a live interactive weight simulator!  
+> 📄 **Academic Research Paper**: Read the full 10-page manuscript: [`RESEARCH_PAPER.md`](./RESEARCH_PAPER.md)  
+> 🔍 **Senior Scrutiny & Reviewer Analysis**: Read our rigorous mathematical defense and solutions to the technical review queries: [`REVIEWER_FEEDBACK_ANALYSIS.md`](./REVIEWER_FEEDBACK_ANALYSIS.md)
 
 ---
 
@@ -48,14 +50,16 @@ CIFAR-10 is partitioned into four disjoint splits (`seed=42`) to prevent data le
 
 ```
 Research_Work_JU/
-├── 01_cnn_branch.ipynb         # VGG-BN branch training and feature export
-├── 02_vit_branch.ipynb         # 6-layer ViT branch training and feature export
+├── RESEARCH_PAPER.md           # 10-page formal academic manuscript
+├── REVIEWER_FEEDBACK_ANALYSIS.md # Senior scrutiny analysis and mathematical resolutions
+├── 01_cnn_branch.ipynb         # ResNet-18 branch training and feature export
+├── 02_vit_branch.ipynb         # Swin Transformer (Swin-T) training and feature export
 ├── 03_fusion_rl.ipynb          # Adaptive RL fusion, benchmarking, and ablation
 ├── presentation.html           # Interactive motion-based presentation deck
 ├── index.html                  # Standalone entry point (GitHub Pages ready)
 ├── environment.yml             # Conda environment definition
 ├── requirements.txt            # Python dependencies
-├── fusion_sar_log.csv          # State-action-reward transition log
+├── fusion_sar_log.csv          # State-action-reward transition log (15,000 samples)
 ├── fusion_weight_calibration_plots.png # Per-class weights & calibration curves
 ├── per_class_f1_comparison.png # Per-class F1-score comparison plot
 ├── confusion_matrix_fused.png  # Normalized confusion matrix heatmap
